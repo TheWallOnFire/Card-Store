@@ -1,3 +1,10 @@
+export interface CardGame {
+  id: string; // e.g., "ygo"
+  name: string;
+  description: string;
+  isActive: boolean;
+}
+
 export interface Card {
   id: string;
   name: string;
@@ -12,6 +19,15 @@ export interface Card {
   isDirectEligible: boolean;
   color?: string; // e.g., 'Red', 'Blue', 'Black', 'Colorless'
   game: string; // e.g. 'Pokémon', 'Yu-Gi-Oh!', 'Flesh and Blood'
+  gameId?: string; // Relation to CardGame.id
+}
+
+export interface ParsedDeckItem {
+  gameId: string;
+  cardId: string;
+  count: number;
+  status: 'valid' | 'invalid' | 'loading';
+  cardName?: string; // resolved after validation
 }
 
 export type Condition = 'NM' | 'LP' | 'MP' | 'HP' | 'DMG';
