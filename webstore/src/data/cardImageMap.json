@@ -1,0 +1,68 @@
+{
+  "card-1": {
+    "name": "Charizard Base Set - 1st Edition",
+    "code": "4/102",
+    "game": "Pokémon",
+    "imgUrl": "https://images.unsplash.com/photo-1620063234975-f9be3e3ad7a2?auto=format&fit=crop&q=80&w=800"
+  },
+  "card-2": {
+    "name": "Black Lotus - Alpha Edition",
+    "code": "232",
+    "game": "Magic: The Gathering",
+    "imgUrl": "https://images.unsplash.com/photo-1611116246342-92e10c7322ab?auto=format&fit=crop&q=80&w=800"
+  },
+  "card-3": {
+    "name": "Blue-Eyes White Dragon - LOB-001",
+    "code": "LOB-001",
+    "game": "Yu-Gi-Oh!",
+    "imgUrl": "https://images.unsplash.com/photo-1605806616949-1e87b487bc5a?auto=format&fit=crop&q=80&w=800"
+  },
+  "card-4": {
+    "name": "Pikachu Illustrator",
+    "code": "Unnumbered",
+    "game": "Pokémon",
+    "imgUrl": "https://images.unsplash.com/photo-1635324203487-111ec01c1072?auto=format&fit=crop&q=80&w=800"
+  },
+  "card-5": {
+    "name": "Mox Sapphire - Beta Edition",
+    "code": "232",
+    "game": "Magic: The Gathering",
+    "imgUrl": "https://images.unsplash.com/photo-1550745165-9bc0b252726f?auto=format&fit=crop&q=80&w=800"
+  },
+  "card-6": {
+    "name": "Dark Magician - SDY-006",
+    "code": "SDY-006",
+    "game": "Yu-Gi-Oh!",
+    "imgUrl": "https://images.unsplash.com/photo-1598284560416-bc1ddcb00508?auto=format&fit=crop&q=80&w=800"
+  },
+  "card-7": {
+    "name": "Umbreon VMAX - Evolving Skies",
+    "code": "215/203",
+    "game": "Pokémon",
+    "imgUrl": "https://images.unsplash.com/photo-1613771404784-3a5686aa2be3?auto=format&fit=crop&q=80&w=800"
+  },
+  "card-8": {
+    "name": "Time Walk - Unlimited",
+    "code": "232",
+    "game": "Magic: The Gathering",
+    "imgUrl": "https://images.unsplash.com/photo-1614728416049-34baeba242f3?auto=format&fit=crop&q=80&w=800"
+  },
+  "card-9": {
+    "name": "Monkey.D.Luffy - Manga Rare",
+    "code": "OP01-120",
+    "game": "One Piece",
+    "imgUrl": "https://images.unsplash.com/photo-1598414338959-1e35a1656209?auto=format&fit=crop&q=80&w=800"
+  },
+  "card-10": {
+    "name": "Elsa - Spirit of Winter",
+    "code": "42/204",
+    "game": "Disney Lorcana",
+    "imgUrl": "https://images.unsplash.com/photo-1535556116002-6281ff3e9f36?auto=format&fit=crop&q=80&w=800"
+  },
+  "card-11": {
+    "name": "Fyendal's Spring Tunic",
+    "code": "WTR-150",
+    "game": "Flesh and Blood",
+    "imgUrl": "https://images.unsplash.com/photo-1618335805553-605b0784be5e?auto=format&fit=crop&q=80&w=800"
+  }
+}
