@@ -1,16 +1,19 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useSearchParams } from 'next/navigation';
+import { useInfiniteQuery } from '@tanstack/react-query';
+import { cardService } from '@/services/cardService';
 import { FilterSidebar } from '@/features/catalog/FilterSidebar';
 import { CardGrid } from '@/features/catalog/CardGrid';
 import { ProductCard } from '@/features/catalog/ProductCard';
-import { FilterState, Card } from '@/types/models';
-import { SlidersHorizontal, Grid2x2, LayoutList } from 'lucide-react';
-import { useQuery } from '@tanstack/react-query';
-import { cardService } from '@/services/cardService';
+import { IFilterState } from '@/types/models';
+import { useIntersectionObserver } from '@/hooks/useIntersectionObserver';
+import { Grid2x2, LayoutList, Loader2, FilterX } from 'lucide-react';
+import { Button } from '@/components/ui/Button';
+import { SearchHeader, SearchControls } from './SearchComponents';
 
-const DEFAULT_FILTERS: FilterState = {
+const DEFAULT_FILTERS: IFilterState = {
   searchQuery: '',
   rarity: [],
   sets: [],
@@ -22,147 +25,97 @@ const DEFAULT_FILTERS: FilterState = {
   isDirectOnly: false,
 };
 
+const ITEMS_PER_PAGE = 20;
+
 export default function SearchPage() {
   const searchParams = useSearchParams();
-  const [filters, setFilters] = useState<FilterState>(DEFAULT_FILTERS);
+  const [filters, setFilters] = useState<IFilterState>(DEFAULT_FILTERS);
   const [sidebarOpen, setSidebarOpen] = useState(false);
-
   const queryParam = searchParams.get('q') || '';
-
-  const { data: allCards = [], isLoading } = useQuery({
-    queryKey: ['cards'],
-    queryFn: () => cardService.getCards(),
-  });
 
   const activeFilters = useMemo(() => ({
     ...filters,
     searchQuery: queryParam || filters.searchQuery
   }), [filters, queryParam]);
 
-  const filteredCards = useMemo<Card[]>(() => {
-    let results = [...allCards];
-    
-    // 1. Text Search (AND)
-    if (activeFilters.searchQuery) {
-      const q = activeFilters.searchQuery.toLowerCase();
-      results = results.filter(
-        (c) => c.name.toLowerCase().includes(q) || c.set.toLowerCase().includes(q)
-      );
-    }
+  const query = useInfiniteQuery({
+    queryKey: ['cards', activeFilters],
+    queryFn: ({ pageParam = 1 }) => 
+      cardService.getPaginatedCards(pageParam, ITEMS_PER_PAGE, activeFilters),
+    getNextPageParam: (lastPage, allPages) => 
+      lastPage.hasMore ? allPages.length + 1 : undefined,
+    initialPageParam: 1,
+  });
 
-    // 2. Faceted Filters (AND between groups, OR within groups)
-    // Rarity Group
-    if (activeFilters.rarity?.length > 0) {
-      results = results.filter((c) => activeFilters.rarity.includes(c.rarity));
-    }
+  const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading, isError, refetch } = query;
 
-    // Sets Group
-    if (activeFilters.sets?.length > 0) {
-      results = results.filter((c) => activeFilters.sets.includes(c.set));
-    }
+  const allCards = useMemo(() => data?.pages.flatMap(page => page.cards) || [], [data]);
+  const totalResults = data?.pages[0]?.total || 0;
 
-    // Game Group
-    if (activeFilters.game?.length > 0) {
-      results = results.filter((c) => activeFilters.game.includes(c.game));
-    }
+  const { targetRef, isIntersecting } = useIntersectionObserver({
+    enabled: hasNextPage && !isFetchingNextPage,
+    threshold: 0.1,
+  });
 
-    // Color Group
-    if (activeFilters.colors?.length > 0) {
-      results = results.filter((c) => c.color && activeFilters.colors.includes(c.color));
+  useEffect(() => {
+    if (isIntersecting && hasNextPage) {
+        fetchNextPage();
     }
+  }, [isIntersecting, hasNextPage, fetchNextPage]);
 
-    // Direct Eligible (Toggle)
-    if (activeFilters.isDirectOnly) {
-      results = results.filter((c) => c.isDirectEligible);
-    }
-
-    // Price Range (Range)
-    if (activeFilters.priceRange) {
-      results = results.filter(
-        (c) => c.marketPrice >= activeFilters.priceRange[0] && c.marketPrice <= activeFilters.priceRange[1]
-      );
-    }
-    
-    // 3. Sort
-    const sortResults = [...results];
-    if (activeFilters.sortBy === 'price_asc') {
-      sortResults.sort((a, b) => a.marketPrice - b.marketPrice);
-    } else if (activeFilters.sortBy === 'price_desc') {
-      sortResults.sort((a, b) => b.marketPrice - a.marketPrice);
-    } else if (activeFilters.sortBy === 'name_asc') {
-      sortResults.sort((a, b) => a.name.localeCompare(b.name));
-    }
-    
-    return sortResults;
-  }, [allCards, activeFilters]);
+  if (isError) {
+      return <SearchError refetch={refetch} />;
+  }
 
   return (
     <div className="min-h-screen bg-slate-50">
-      {/* Page Header */}
-      <div className="bg-white border-b border-slate-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <h1 className="text-3xl font-black tracking-tight text-slate-900 uppercase italic">
-            {activeFilters.searchQuery ? `Results: "${activeFilters.searchQuery}"` : 'Browse All Cards'}
-          </h1>
-          <p className="mt-1 text-sm font-medium text-slate-500 uppercase tracking-wide">
-            {isLoading ? 'Searching...' : `${filteredCards.length} listings found`}
-          </p>
-        </div>
-      </div>
+      <SearchHeader searchQuery={activeFilters.searchQuery} totalResults={totalResults} isLoading={isLoading} />
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="flex gap-8">
-          {/* Sidebar — Desktop */}
-          <aside className="hidden lg:block w-64 shrink-0 sticky top-24 self-start">
-            <FilterSidebar filters={filters} onFilterChange={setFilters} />
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+        <div className="flex gap-12">
+          <aside className="hidden lg:block w-72 shrink-0 sticky top-28 self-start">
+            <div className="bg-white rounded-3xl border border-slate-200 p-8 shadow-sm">
+                <FilterSidebar filters={filters} onFilterChange={setFilters} />
+            </div>
           </aside>
 
-          {/* Main Content */}
           <div className="flex-1 min-w-0">
-            {/* Results bar */}
-            <div className="flex items-center justify-between mb-6">
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => setSidebarOpen(true)}
-                  className="flex lg:hidden items-center gap-2 border border-slate-300 rounded-md px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-100 transition-colors"
-                >
-                  <SlidersHorizontal className="h-4 w-4" />
-                  Filters
-                </button>
-              </div>
-              <div className="flex items-center gap-2">
-                <button className="p-2 rounded-md border border-slate-200 bg-white text-blue-600 hover:bg-blue-50 transition-colors">
-                  <Grid2x2 className="h-4 w-4" />
-                </button>
-                <button className="p-2 rounded-md border border-slate-200 bg-white text-slate-500 hover:bg-slate-50 transition-colors">
-                  <LayoutList className="h-4 w-4" />
-                </button>
-              </div>
-            </div>
+            <SearchControls onOpenSidebar={() => setSidebarOpen(true)} />
 
-            <CardGrid
-              cards={filteredCards}
-              isLoading={isLoading}
-              CardComponent={ProductCard}
-              emptyMessage="No cards match your current filters."
-            />
+            <CardGrid cards={allCards} isLoading={isLoading} CardComponent={ProductCard} emptyMessage="No matches found." />
+
+            <div ref={targetRef} className="py-16 flex flex-col items-center gap-4">
+              {isFetchingNextPage ? (
+                 <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+              ) : hasNextPage ? (
+                <Button variant="ghost" onClick={() => fetchNextPage()}>Load More</Button>
+              ) : null}
+            </div>
           </div>
         </div>
       </div>
 
-      {/* Mobile Sidebar Overlay */}
-      {sidebarOpen && (
-        <div className="fixed inset-0 z-50 lg:hidden">
-          <div className="absolute inset-0 bg-slate-900/50" onClick={() => setSidebarOpen(false)} />
-          <div className="absolute left-0 top-0 bottom-0 w-80 bg-white shadow-2xl overflow-y-auto p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="font-black uppercase tracking-widest text-sm">Filters</h2>
-              <button onClick={() => setSidebarOpen(false)} className="text-slate-500 hover:text-slate-900">✕</button>
-            </div>
-            <FilterSidebar filters={filters} onFilterChange={setFilters} />
-          </div>
-        </div>
-      )}
+      {sidebarOpen && <MobileSidebar filters={filters} setFilters={setFilters} onClose={() => setSidebarOpen(false)} />}
     </div>
   );
+}
+
+function SearchError({ refetch }: { refetch: () => void }) {
+    return (
+        <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-8 text-center">
+            <FilterX size={32} />
+            <Button onClick={() => refetch()} className="mt-8">Retry</Button>
+        </div>
+    );
+}
+
+function MobileSidebar({ filters, setFilters, onClose }: { filters: IFilterState, setFilters: any, onClose: () => void }) {
+    return (
+        <div className="fixed inset-0 z-50 lg:hidden">
+            <div className="absolute inset-0 bg-slate-900/60" onClick={onClose} />
+            <div className="absolute left-0 top-0 bottom-0 w-80 bg-white p-10">
+                <FilterSidebar filters={filters} onFilterChange={setFilters} />
+            </div>
+        </div>
+    );
 }

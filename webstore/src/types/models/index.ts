@@ -1,11 +1,11 @@
-export interface CardGame {
+export interface ICardGame {
   id: string; // e.g., "ygo"
   name: string;
   description: string;
   isActive: boolean;
 }
 
-export interface Card {
+export interface ICard {
   id: string;
   name: string;
   set: string;
@@ -22,7 +22,7 @@ export interface Card {
   gameId?: string; // Relation to CardGame.id
 }
 
-export interface ParsedDeckItem {
+export interface IParsedDeckItem {
   gameId: string;
   cardId: string;
   count: number;
@@ -30,21 +30,21 @@ export interface ParsedDeckItem {
   cardName?: string; // resolved after validation
 }
 
-export type Condition = 'NM' | 'LP' | 'MP' | 'HP' | 'DMG';
+export type ICondition = 'NM' | 'LP' | 'MP' | 'HP' | 'DMG';
 
-export interface Listing {
+export interface IListing {
   id: string;
   cardId: string;
   sellerId: string;
   sellerName: string;
   sellerFeedback: number; // 0-100 percentage
-  condition: Condition;
+  condition: ICondition;
   price: number;
   shippingPrice: number;
   quantityAvailable: number;
 }
 
-export interface FilterState {
+export interface IFilterState {
   searchQuery: string;
   rarity: string[];
   sets: string[];

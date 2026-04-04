@@ -1,6 +1,6 @@
-import { Card } from '@/types/models';
+import { ICard } from '@/types/models';
 
-export const mockCards: Card[] = [
+export const mockCards: ICard[] = [
   {
     id: 'card-1',
     name: 'Charizard Base Set - 1st Edition',
