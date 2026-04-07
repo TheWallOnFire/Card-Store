@@ -1,55 +1,96 @@
 'use client';
 
-import React, { createContext, useContext, useEffect, useReducer, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect } from 'react';
 import { ICard } from '@/types/models';
-import { cartReducer, initialCartState, ICartState } from './cartReducer';
 
-interface ICartContextType extends ICartState {
-  addItem: (card: ICard) => void;
-  removeItem: (id: string) => void;
-  updateQuantity: (id: string, quantity: number) => void;
-  clearCart: () => void;
-  toggleCart: () => void;
+interface ICartItem extends ICard {
+  quantity: number;
 }
 
-const CartContext = createContext<ICartContextType | undefined>(undefined);
+interface ICartContext {
+  items: ICartItem[];
+  addItem: (card: ICard) => void;
+  removeItem: (id: string) => void;
+  updateQuantity: (id: string, qty: number) => void;
+  clearCart: () => void;
+  isOpen: boolean;
+  setIsOpen: (open: boolean) => void;
+  toggleCart: () => void;
+  totalItems: number;
+  totalPrice: number;
+}
 
-export function CartProvider({ children }: { children: ReactNode }) {
-  const [state, dispatch] = useReducer(cartReducer, initialCartState);
+const CartContext = createContext<ICartContext | undefined>(undefined);
 
-  useEffect(() => {
-    const savedCart = localStorage.getItem('tcg_cart');
-    if (savedCart) {
-      try {
-        dispatch({ type: 'LOAD_CART', payload: JSON.parse(savedCart) });
-      } catch (err) {
-        console.error('Failed to parse cart JSON', err);
+function useCartStore() {
+  const [items, setItems] = useState<ICartItem[]>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('cart');
+      if (saved) {
+        try {
+          return JSON.parse(saved);
+        } catch (e) {
+          console.error('Failed to parse cart', e);
+        }
       }
     }
-  }, []);
+    return [];
+  });
+
+  const [isOpen, setIsOpen] = useState(false);
 
   useEffect(() => {
-    localStorage.setItem('tcg_cart', JSON.stringify(state.items));
-  }, [state.items]);
+    localStorage.setItem('cart', JSON.stringify(items));
+  }, [items]);
 
-  const addItem = (card: ICard) => dispatch({ type: 'ADD_ITEM', payload: card });
-  const removeItem = (id: string) => dispatch({ type: 'REMOVE_ITEM', payload: id });
-  const updateQuantity = (id: string, quantity: number) => 
-    dispatch({ type: 'UPDATE_QUANTITY', payload: { id, quantity } });
-  const clearCart = () => dispatch({ type: 'CLEAR_CART' });
-  const toggleCart = () => dispatch({ type: 'TOGGLE_CART' });
+  const addItem = (card: ICard) => {
+    if (!card.id || (card.marketPrice === undefined && card.lowPrice === undefined)) {
+        console.error('Incomplete card data rejected:', card);
+        return;
+    }
 
+    setItems((prev) => {
+      const existing = prev.find((item) => item.id === card.id);
+      if (existing) {
+        return prev.map((item) => 
+          item.id === card.id ? { ...item, quantity: item.quantity + 1 } : item
+        );
+      }
+      return [...prev, { ...card, quantity: 1 }];
+    });
+    setIsOpen(true);
+  };
+
+  const removeItem = (id: string) => setItems((prev) => prev.filter((item) => item.id !== id));
+  const updateQuantity = (id: string, qty: number) => {
+    if (qty >= 1) {
+      setItems((prev) => prev.map((item) => 
+        item.id === id ? { ...item, quantity: qty } : item
+      ));
+    }
+  };
+  const clearCart = () => setItems([]);
+  const toggleCart = () => setIsOpen((prev) => !prev);
+
+  const totalItems = items.reduce((sum, item) => sum + item.quantity, 0);
+  const totalPrice = items.reduce((sum, item) => sum + ((item.marketPrice || 0) * item.quantity), 0);
+
+  return { items, addItem, removeItem, updateQuantity, clearCart, isOpen, setIsOpen, toggleCart, totalItems, totalPrice };
+}
+
+export function CartProvider({ children }: { children: React.ReactNode }) {
+  const cart = useCartStore();
   return (
-    <CartContext.Provider value={{ ...state, addItem, removeItem, updateQuantity, clearCart, toggleCart }}>
+    <CartContext.Provider value={cart}>
       {children}
     </CartContext.Provider>
   );
 }
 
-export function useCart() {
+export const useCart = () => {
   const context = useContext(CartContext);
-  if (context === undefined) {
-      throw new Error('useCart must be used within a CartProvider');
+  if (!context) {
+    throw new Error('useCart must be used within a CartProvider');
   }
   return context;
-}
+};

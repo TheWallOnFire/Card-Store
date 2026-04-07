@@ -20,6 +20,8 @@ export interface ICard {
   color?: string; // e.g., 'Red', 'Blue', 'Black', 'Colorless'
   game: string; // e.g. 'Pokémon', 'Yu-Gi-Oh!', 'Flesh and Blood'
   gameId?: string; // Relation to CardGame.id
+  listedCount: number;
+  volatility: number;
 }
 
 export interface IParsedDeckItem {

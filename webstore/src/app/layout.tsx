@@ -3,7 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import { Providers } from "@/components/Providers";
 import { Navbar } from "@/components/shared/Navbar";
 import { Footer } from "@/components/shared/Footer";
-import { CartSidebar } from "@/features/cart/CartSidebar";
+import { CartDrawer } from "@/components/cart/CartDrawer";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -36,7 +36,7 @@ export default function RootLayout({
       >
         <Providers>
           <Navbar />
-          <CartSidebar />
+          <CartDrawer />
           
           <main className="flex-grow w-full">
             {children}

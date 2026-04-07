@@ -1,3 +1,5 @@
+'use client';
+
 import React, { useOptimistic, useTransition } from 'react';
 import { Button } from '@/components/ui/Button';
 import { useCart } from '@/context/CartContext';

@@ -3,20 +3,20 @@ import { Metadata, ResolvingMetadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { cardService } from '@/services/cardService';
-import { getMockListings, getMockPriceHistory } from '@/services/listingService';
+import { getMockListings } from '@/services/listingService'; // Keep for now until listings API is ready
 import { ImageGallery } from '@/features/listings/ImageGallery';
-import { PriceHistoryChart } from '@/features/listings/PriceHistoryChart';
+import { MarketAnalyticsSection } from './ProductMarketComponents';
 import { Badge } from '@/components/ui/Badge';
 import { ChevronRight, TrendingUp, Package, ShieldCheck, Zap, ShoppingCart, type LucideIcon } from 'lucide-react';
 import { AddToCartButton, ListingsTableClient } from './ProductClientComponents';
 import { ErrorBoundary } from '@/components/shared/ErrorBoundary';
 
-interface ProductPageProps {
+interface IProductPageProps {
   params: Promise<{ id: string }>;
 }
 
 export async function generateMetadata(
-  { params }: ProductPageProps,
+  { params }: IProductPageProps,
   parent: ResolvingMetadata
 ): Promise<Metadata> {
   const id = (await params).id;
@@ -46,7 +46,7 @@ export async function generateMetadata(
   };
 }
 
-export default async function ProductPage({ params }: ProductPageProps) {
+export default async function ProductPage({ params }: IProductPageProps) {
   const { id } = await params;
   const card = await cardService.getCardById(id);
 
@@ -55,7 +55,6 @@ export default async function ProductPage({ params }: ProductPageProps) {
   }
 
   const listings = getMockListings(card.id);
-  const priceHistory = getMockPriceHistory(card.marketPrice);
   const lowestListing = [...listings].sort((a, b) => (a.price + a.shippingPrice) - (b.price + b.shippingPrice))[0];
 
   return (
@@ -144,17 +143,17 @@ export default async function ProductPage({ params }: ProductPageProps) {
             </div>
           </div>
 
-          {/* Right: Price Chart */}
+          {/* Right: Real-Time Market Analytics */}
           <div className="lg:col-span-3 lg:border-l lg:border-slate-200 lg:pl-10">
             <h3 className="text-xs font-black uppercase tracking-widest text-slate-900 mb-6 flex items-center gap-2">
-              <TrendingUp className="h-4 w-4 text-blue-600" /> Market Tracing
+              <TrendingUp className="h-4 w-4 text-blue-600" /> Live Market Tracking
             </h3>
-            <Suspense fallback={<div className="h-48 w-full bg-slate-100 rounded-xl animate-pulse" />}>
-                {priceHistory.length > 0 && <PriceHistoryChart data={priceHistory} cardName={card.name} />}
+            <Suspense fallback={<div className="h-48 w-full bg-slate-100 rounded-3xl animate-pulse" />}>
+                <MarketAnalyticsSection cardId={card.id} initialPrice={card.marketPrice} />
             </Suspense>
-            <div className="mt-8 p-6 bg-blue-50/50 rounded-2xl border border-blue-100/50">
+            <div className="mt-8 p-6 bg-blue-50/50 rounded-3xl border border-blue-100/50">
                 <p className="text-[10px] font-bold text-blue-700/60 leading-relaxed uppercase tracking-tight">
-                    Market data is synchronized via proprietary TCG indexes every 15 minutes. 
+                    Real-time market analytics provided by CardVault indexers. Data refreshed every 5 minutes.
                 </p>
             </div>
           </div>
