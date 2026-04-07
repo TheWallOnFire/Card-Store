@@ -1,7 +1,6 @@
 'use client';
 
 import React from 'react';
-import { IFilterState } from '@/types/models';
 
 interface ISearchHeaderProps {
   searchQuery: string;
@@ -28,9 +27,11 @@ export function SearchHeader({ searchQuery, totalResults, isLoading }: ISearchHe
 
 interface ISearchControlsProps {
   onOpenSidebar: () => void;
+  sortBy: string;
+  onSortChange: (sort: string) => void;
 }
 
-export function SearchControls({ onOpenSidebar }: ISearchControlsProps) {
+export function SearchControls({ onOpenSidebar, sortBy, onSortChange }: ISearchControlsProps) {
     return (
         <div className="flex items-center justify-between mb-8 bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
             <div className="flex items-center gap-3">
@@ -43,6 +44,20 @@ export function SearchControls({ onOpenSidebar }: ISearchControlsProps) {
                 <div className="hidden sm:flex items-center gap-2 text-[10px] font-black text-slate-400 uppercase tracking-widest ml-2">
                     <span className="text-slate-900 underline underline-offset-4 decoration-blue-500">Live Sync Enabled</span>
                 </div>
+            </div>
+
+            <div className="flex items-center gap-2">
+                <span className="hidden sm:block text-[10px] font-black text-slate-400 uppercase tracking-widest">Sort:</span>
+                <select 
+                    value={sortBy}
+                    onChange={(e) => onSortChange(e.target.value)}
+                    className="bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-[10px] font-black uppercase tracking-widest outline-none focus:border-blue-500 cursor-pointer appearance-none transition-all"
+                >
+                    <option value="price_asc">Price Low to High</option>
+                    <option value="price_desc">Price High to Low</option>
+                    <option value="name_asc">Name A-Z</option>
+                    <option value="date_desc">Newest First</option>
+                </select>
             </div>
         </div>
     );

@@ -1,73 +1,78 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Card, CardGame } from '@/types/models';
+import { ICard, ICardGame } from '@/types/models';
 import { Table, Modal } from '@/components/admin/AdminComponents';
-import { Search, Plus, Edit2, Trash2, Image as ImageIcon, Filter, ChevronDown, Package } from 'lucide-react';
+import { Search, Plus, Edit2, Trash2, Image as ImageIcon, Filter, ChevronDown } from 'lucide-react';
 import { Badge } from '@/components/ui/Badge';
+import { cardService } from '@/services/cardService';
 
-const mockCards: Card[] = [
-  { id: '001', gameId: 'ygo', game: 'Yu-Gi-Oh!', name: 'Blue-Eyes White Dragon', set: 'LOB-001', number: '001', rarity: 'Ultra Rare', imageUrl: 'https://images.ygoprodeck.com/images/cards/89631139.jpg', marketPrice: 15.50, lowPrice: 12.0, buylistPrice: 8.0, isDirectEligible: true },
-  { id: '002', gameId: 'ygo', game: 'Yu-Gi-Oh!', name: 'Dark Magician', set: 'LOB-005', number: '005', rarity: 'Ultra Rare', imageUrl: 'https://images.ygoprodeck.com/images/cards/46986414.jpg', marketPrice: 12.00, lowPrice: 10.0, buylistPrice: 6.5, isDirectEligible: true },
-  { id: '001', gameId: 'pkm', game: 'Pokémon', name: 'Charizard', set: 'Base Set', number: '4', rarity: 'Holo', imageUrl: 'https://images.pokemontcg.io/base1/4.png', marketPrice: 450.00, lowPrice: 380.0, buylistPrice: 250.0, isDirectEligible: false },
-];
-
-const mockGames: CardGame[] = [
+const mockGames: ICardGame[] = [
   { id: 'ygo', name: 'Yu-Gi-Oh!', description: '', isActive: true },
   { id: 'pkm', name: 'Pokémon', description: '', isActive: true },
   { id: 'mtg', name: 'MTG', description: '', isActive: true },
+  { id: 'op', name: 'One Piece', description: '', isActive: true },
+  { id: 'lor', name: 'Disney Lorcana', description: '', isActive: true },
+  { id: 'fab', name: 'Flesh and Blood', description: '', isActive: true },
 ];
 
 export default function InventoryPage() {
-  const [cards, setCards] = useState<Card[]>(mockCards);
+  const [cards, setCards] = useState<ICard[]>([]);
+  const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [editingCard, setEditingCard] = useState<Card | null>(null);
+  const [editingCard, setEditingCard] = useState<ICard | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [imagePreview, setImagePreview] = useState<string | null>(null);
+
+  React.useEffect(() => {
+    cardService.getCards().then(data => {
+        setCards(data);
+        setLoading(false);
+    });
+  }, []);
 
   const filteredCards = cards.filter(c => 
     c.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     c.id.includes(searchQuery) ||
-    c.gameId?.includes(searchQuery)
+    c.game.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   const columns = [
     { 
       key: 'imageUrl', 
       label: 'Preview', 
-      render: (card: Card) => (
+      render: (card: ICard) => (
         <div className="w-12 h-16 rounded-lg bg-slate-100 overflow-hidden border border-slate-200 shadow-sm group-hover:shadow-md transition-all">
           <img src={card.imageUrl} alt={card.name} className="w-full h-full object-cover" />
         </div>
       )
     },
-    { key: 'game', label: 'Game', render: (card: Card) => <Badge variant="secondary" className="font-black text-[9px] uppercase tracking-tighter">{card.game}</Badge> },
-    { key: 'name', label: 'Card Identity', render: (card: Card) => (
+    { key: 'game', label: 'Game', render: (card: ICard) => <Badge variant="secondary" className="font-black text-[9px] uppercase tracking-tighter">{card.game}</Badge> },
+    { key: 'name', label: 'Card Identity', render: (card: ICard) => (
         <div className="flex flex-col">
             <span className="font-black text-slate-900 tracking-tight">{card.name}</span>
             <span className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">{card.set} · #{card.number}</span>
         </div>
     ) },
-    { key: 'rarity', label: 'Rarity', render: (card: Card) => <span className="text-xs font-bold text-slate-500">{card.rarity}</span> },
+    { key: 'rarity', label: 'Rarity', render: (card: ICard) => <span className="text-xs font-bold text-slate-500">{card.rarity}</span> },
     { 
         key: 'marketPrice', 
         label: 'Market Val.', 
-        render: (card: Card) => <span className="font-black text-slate-900 tracking-tighter">${card.marketPrice?.toFixed(2)}</span> 
+        render: (card: ICard) => <span className="font-black text-slate-900 tracking-tighter">${card.marketPrice?.toFixed(2)}</span> 
     },
     { 
         key: 'isDirectEligible', 
         label: 'Direct', 
-        render: (card: Card) => card.isDirectEligible ? <span className="text-[10px] font-black text-blue-600 tracking-widest uppercase italic">Eligible</span> : <span className="text-[10px] font-black text-slate-300 tracking-widest uppercase">No</span> 
+        render: (card: ICard) => card.isDirectEligible ? <span className="text-[10px] font-black text-blue-600 tracking-widest uppercase italic">Eligible</span> : <span className="text-[10px] font-black text-slate-300 tracking-widest uppercase">No</span> 
     },
   ];
 
   const handleSave = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
-    const cardData: Card = {
+    const cardData: ICard = {
       id: (formData.get('id') as string) || editingCard?.id || Math.random().toString(36).substr(2, 9),
-      gameId: formData.get('gameId') as string,
-      game: mockGames.find(g => g.id === formData.get('gameId'))?.name || '',
+      game: mockGames.find(g => g.name === formData.get('game'))?.name || (formData.get('game') as string),
       name: formData.get('name') as string,
       imageUrl: (formData.get('imageUrl') as string) || imagePreview || '',
       rarity: formData.get('rarity') as string,
@@ -77,10 +82,12 @@ export default function InventoryPage() {
       lowPrice: parseFloat(formData.get('lowPrice') as string) || 0,
       buylistPrice: parseFloat(formData.get('buylistPrice') as string) || 0,
       isDirectEligible: formData.get('isDirectEligible') === 'on',
+      listedCount: parseInt(formData.get('listedCount') as string) || 0,
+      volatility: parseFloat(formData.get('volatility') as string) || 0,
     };
 
     if (editingCard) {
-      setCards(cards.map(c => c.id === editingCard.id && c.gameId === editingCard.gameId ? cardData : c));
+      setCards(cards.map(c => c.id === editingCard.id ? cardData : c));
     } else {
       setCards([...cards, cardData]);
     }
@@ -88,6 +95,8 @@ export default function InventoryPage() {
     setEditingCard(null);
     setImagePreview(null);
   };
+
+  if (loading) return <div className="py-20 text-center font-black text-slate-400 uppercase tracking-widest">Loading Catalog...</div>;
 
   return (
     <div className="py-12 px-10 max-w-7xl mx-auto">
@@ -126,7 +135,7 @@ export default function InventoryPage() {
       <Table 
         columns={columns as any} 
         data={filteredCards} 
-        actions={(card: Card) => (
+        actions={(card: ICard) => (
           <div className="flex items-center justify-end gap-2 text-slate-300">
             <button 
               onClick={() => { setEditingCard(card); setIsModalOpen(true); setImagePreview(card.imageUrl); }}
@@ -135,7 +144,7 @@ export default function InventoryPage() {
               <Edit2 size={18} />
             </button>
             <button 
-              onClick={() => setCards(cards.filter(c => !(c.id === card.id && c.gameId === card.gameId)))}
+              onClick={() => setCards(cards.filter(c => c.id !== card.id))}
               className="p-2.5 rounded-xl hover:bg-red-50 hover:text-red-600 transition-all"
             >
               <Trash2 size={18} />
@@ -153,8 +162,8 @@ export default function InventoryPage() {
           <div className="grid grid-cols-2 gap-6">
             <div>
               <label className="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2">Game Title</label>
-              <select name="gameId" defaultValue={editingCard?.gameId} className="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:outline-none focus:ring-4 focus:ring-blue-500/5 focus:border-blue-500 transition-all text-sm font-bold appearance-none">
-                {mockGames.map(g => <option key={g.id} value={g.id}>{g.name}</option>)}
+              <select name="game" defaultValue={editingCard?.game} className="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:outline-none focus:ring-4 focus:ring-blue-500/5 focus:border-blue-500 transition-all text-sm font-bold appearance-none">
+                {mockGames.map(g => <option key={g.id} value={g.name}>{g.name}</option>)}
               </select>
             </div>
             <div>

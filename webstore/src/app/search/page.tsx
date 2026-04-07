@@ -7,7 +7,7 @@ import { cardService } from '@/services/cardService';
 import { FilterSidebar } from '@/features/catalog/FilterSidebar';
 import { CardGrid } from '@/features/catalog/CardGrid';
 import { ProductCard } from '@/features/catalog/ProductCard';
-import { IFilterState } from '@/types/models';
+import { IFilterState, ICard } from '@/types/models';
 import { useIntersectionObserver } from '@/hooks/useIntersectionObserver';
 import { Loader2, FilterX } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
@@ -31,12 +31,11 @@ export default function SearchPage() {
   
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
-  // Synchronize initial query from URL only once or when URL query changes significantly
   useEffect(() => {
     if (initialQuery && initialQuery !== filters.searchQuery) {
         setFilters(prev => ({ ...prev, searchQuery: initialQuery }));
     }
-  }, [initialQuery]);
+  }, [initialQuery, filters.searchQuery]);
 
   const query = useInfiniteQuery({
     queryKey: ['cards', filters],
@@ -47,25 +46,13 @@ export default function SearchPage() {
     initialPageParam: 1,
   });
 
-  const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading, isError, refetch } = query;
-  const allCards = useMemo(() => data?.pages.flatMap(page => page.cards) || [], [data]);
-  const totalResults = data?.pages[0]?.total || 0;
-
-  const { targetRef, isIntersecting } = useIntersectionObserver({
-    enabled: hasNextPage && !isFetchingNextPage, threshold: 0.1,
-  });
-
-  useEffect(() => {
-    if (isIntersecting && hasNextPage) {
-        fetchNextPage();
-    }
-  }, [isIntersecting, hasNextPage, fetchNextPage]);
-
-  if (isError) return <SearchError refetch={refetch} />;
+  if (query.isError) {
+      return <SearchError refetch={query.refetch} />;
+  }
 
   return (
     <div className="min-h-screen bg-slate-50">
-      <SearchHeader searchQuery={filters.searchQuery} totalResults={totalResults} isLoading={isLoading} />
+      <SearchHeader searchQuery={filters.searchQuery} totalResults={query.data?.pages[0]?.total || 0} isLoading={query.isLoading} />
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
         <div className="flex gap-12">
           <aside className="hidden lg:block w-72 shrink-0 sticky top-28 self-start">
@@ -73,22 +60,53 @@ export default function SearchPage() {
                 <FilterSidebar filters={filters} onFilterChange={setFilters} />
             </div>
           </aside>
-          <div className="flex-1 min-w-0">
-            <SearchControls onOpenSidebar={() => setSidebarOpen(true)} />
-            <CardGrid cards={allCards} isLoading={isLoading} CardComponent={ProductCard} emptyMessage="No matches found." />
-            <div ref={targetRef} className="py-16 flex flex-col items-center gap-4">
-              {isFetchingNextPage ? (
-                 <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
-              ) : hasNextPage ? (
-                <Button variant="ghost" onClick={() => fetchNextPage()}>Load More</Button>
-              ) : null}
-            </div>
-          </div>
+          <SearchContent 
+            filters={filters} 
+            setFilters={setFilters} 
+            query={query} 
+            onOpenSidebar={() => setSidebarOpen(true)} 
+          />
         </div>
       </div>
       {sidebarOpen && <MobileSidebar filters={filters} setFilters={setFilters} onClose={() => setSidebarOpen(false)} />}
     </div>
   );
+}
+
+function SearchContent({ filters, setFilters, query, onOpenSidebar }: { 
+    filters: IFilterState, 
+    setFilters: React.Dispatch<React.SetStateAction<IFilterState>>, 
+    query: any, 
+    onOpenSidebar: () => void 
+}) {
+    const allCards = useMemo(() => query.data?.pages.flatMap((page: any) => page.cards) || [], [query.data]);
+    const { targetRef, isIntersecting } = useIntersectionObserver({
+        enabled: query.hasNextPage && !query.isFetchingNextPage, threshold: 0.1,
+    });
+
+    useEffect(() => {
+        if (isIntersecting && query.hasNextPage) {
+            query.fetchNextPage();
+        }
+    }, [isIntersecting, query]);
+
+    return (
+        <div className="flex-1 min-w-0">
+            <SearchControls 
+                onOpenSidebar={onOpenSidebar} 
+                sortBy={filters.sortBy || 'price_asc'}
+                onSortChange={(val) => setFilters(prev => ({ ...prev, sortBy: val }))}
+            />
+            <CardGrid cards={allCards} isLoading={query.isLoading} CardComponent={ProductCard} emptyMessage="No matches found." />
+            <div ref={targetRef} className="py-16 flex flex-col items-center gap-4">
+                {query.isFetchingNextPage ? (
+                    <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+                ) : query.hasNextPage ? (
+                    <Button variant="ghost" onClick={() => query.fetchNextPage()}>Load More</Button>
+                ) : null}
+            </div>
+        </div>
+    );
 }
 
 function SearchError({ refetch }: { refetch: () => void }) {
@@ -100,7 +118,11 @@ function SearchError({ refetch }: { refetch: () => void }) {
     );
 }
 
-function MobileSidebar({ filters, setFilters, onClose }: { filters: IFilterState, setFilters: any, onClose: () => void }) {
+function MobileSidebar({ filters, setFilters, onClose }: { 
+    filters: IFilterState, 
+    setFilters: React.Dispatch<React.SetStateAction<IFilterState>>, 
+    onClose: () => void 
+}) {
     return (
         <div className="fixed inset-0 z-50 lg:hidden">
             <div className="absolute inset-0 bg-slate-900/60" onClick={onClose} />

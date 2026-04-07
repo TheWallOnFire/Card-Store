@@ -1,3 +1,5 @@
+"use server";
+
 import { z } from 'zod';
 import { createClient } from '@/lib/supabase/server';
 import { revalidatePath } from 'next/cache';
