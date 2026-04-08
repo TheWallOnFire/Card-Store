@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useRef, useEffect, useMemo } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { ShoppingBag, Search, Menu, X, ChevronDown, Zap, Star, Package } from 'lucide-react';
@@ -172,10 +172,17 @@ function MegaMenu() {
 }
 
 function CartButton({ count, onToggle }: { count: number, onToggle: () => void }) {
+    const [mounted, setMounted] = React.useState(false);
+    React.useEffect(() => setMounted(true), []);
+
     return (
         <Button variant="ghost" size="icon" className="relative text-slate-700 hover:text-blue-600 hover:bg-blue-50" onClick={onToggle}>
             <ShoppingBag className="h-5 w-5" />
-            {count > 0 && <Badge className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 text-[10px] bg-blue-600 text-white border-2 border-white">{count}</Badge>}
+            {mounted && count > 0 && (
+                <Badge className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 text-[10px] bg-blue-600 text-white border-2 border-white">
+                    {count}
+                </Badge>
+            )}
         </Button>
     );
 }

@@ -1,4 +1,14 @@
+'use client';
+
+import React, { useEffect, useState } from 'react';
+
 export function Footer() {
+  const [year, setYear] = useState<number | null>(null);
+
+  useEffect(() => {
+    setYear(new Date().getFullYear());
+  }, []);
+
   return (
     <footer className="w-full border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-[#0a0a0a] pt-16 pb-8">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -31,7 +41,7 @@ export function Footer() {
           </div>
         </div>
         <div className="border-t border-slate-200 dark:border-slate-800 pt-8 flex flex-col md:flex-row justify-between items-center gap-4 text-sm text-slate-500 dark:text-slate-400">
-          <p>© {new Date().getFullYear()} CardStore. All rights reserved.</p>
+          <p>© {year || '2024'} CardStore. All rights reserved.</p>
           <div className="flex gap-4">
             <a href="#" className="hover:text-slate-900 dark:hover:text-slate-100 transition-colors">Twitter</a>
             <a href="#" className="hover:text-slate-900 dark:hover:text-slate-100 transition-colors">Instagram</a>

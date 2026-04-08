@@ -75,11 +75,9 @@ function getMockPaginatedCards(page: number, limit: number, filters: Partial<IFi
     }
 
     if (filters.game && filters.game.length > 0) {
-        const gameMap: Record<string, string> = {
-            'Pokémon': 'Pokemon', 'Magic: The Gathering': 'MTG', 'Yu-Gi-Oh!': 'Yu-Gi-Oh'
-        };
-        const targetGames = filters.game.map(g => gameMap[g] || g);
-        filtered = filtered.filter(c => targetGames.includes(c.game));
+        const normalize = (s: string) => s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+        const targetGames = filters.game.map(normalize);
+        filtered = filtered.filter(c => targetGames.includes(normalize(c.game)));
     }
 
     if (filters.rarity && filters.rarity.length > 0) {

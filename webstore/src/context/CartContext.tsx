@@ -23,25 +23,29 @@ interface ICartContext {
 const CartContext = createContext<ICartContext | undefined>(undefined);
 
 function useCartStore() {
-  const [items, setItems] = useState<ICartItem[]>(() => {
+  const [items, setItems] = useState<ICartItem[]>([]);
+  const [isInitialized, setIsInitialized] = useState(false);
+  const [isOpen, setIsOpen] = useState(false);
+
+  useEffect(() => {
     if (typeof window !== 'undefined') {
       const saved = localStorage.getItem('cart');
       if (saved) {
         try {
-          return JSON.parse(saved);
+          setItems(JSON.parse(saved));
         } catch (e) {
           console.error('Failed to parse cart', e);
         }
       }
+      setIsInitialized(true);
     }
-    return [];
-  });
-
-  const [isOpen, setIsOpen] = useState(false);
+  }, []);
 
   useEffect(() => {
-    localStorage.setItem('cart', JSON.stringify(items));
-  }, [items]);
+    if (isInitialized) {
+      localStorage.setItem('cart', JSON.stringify(items));
+    }
+  }, [items, isInitialized]);
 
   const addItem = (card: ICard) => {
     if (!card.id || (card.marketPrice === undefined && card.lowPrice === undefined)) {
