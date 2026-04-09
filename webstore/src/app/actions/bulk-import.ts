@@ -4,8 +4,7 @@ import { z } from 'zod';
 import { createClient } from '@/lib/supabase/server';
 import { revalidatePath } from 'next/cache';
 import { SupabaseClient } from '@supabase/supabase-js';
-
-const LinePattern = /^[a-zA-Z0-9]+_[a-zA-Z0-9]+_\d+$/;
+import { parseBulkLines } from '@/lib/parsers';
 
 const BulkImportSchema = z.object({
   rawLines: z.string().min(1, "Input cannot be empty"),
@@ -58,26 +57,6 @@ export async function bulkImportAction(_prevState: IBulkImportResult | null, for
   }
 }
 
-function parseBulkLines(rawText: string): { items: IParsedItem[], errors: string[] } {
-  const lines = rawText.split('\n').map(l => l.trim()).filter(l => l.length > 0);
-  const items: IParsedItem[] = [];
-  const errors: string[] = [];
-
-  for (const [idx, line] of lines.entries()) {
-    if (!LinePattern.test(line)) {
-      errors.push(`Line ${idx + 1}: Invalid format (expected gameid_cardid_count)`);
-      continue;
-    }
-    const [gameId, cardId, countStr] = line.split('_');
-    const count = parseInt(countStr, 10);
-    if (count <= 0) {
-      errors.push(`Line ${idx + 1}: Quantity must be positive`);
-      continue;
-    }
-    items.push({ gameId, cardId, count });
-  }
-  return { items, errors };
-}
 
 async function recordImportAudit(supabase: SupabaseClient, userId: string, items: IParsedItem[]) {
   return supabase.from('audit_logs').insert({
@@ -88,7 +67,7 @@ async function recordImportAudit(supabase: SupabaseClient, userId: string, items
   });
 }
 
-function handleImportError(err: unknown): IBulkImportResult {
+async function handleImportError(err: unknown): Promise<IBulkImportResult> {
   if (err instanceof z.ZodError) {
     return { success: false, message: "Validation Error", errors: err.issues.map(e => e.message) };
   }

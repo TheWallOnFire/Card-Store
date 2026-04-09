@@ -41,7 +41,7 @@ export function Navbar() {
             <NavSearch />
             <div className="flex items-center gap-2">
               <MegaMenu />
-              <Link href="/search" className="hidden md:block text-sm font-semibold text-slate-700 hover:text-blue-600 px-3 py-2 transition-colors">All Cards</Link>
+              <Link href="/search" className="hidden md:block text-sm font-semibold text-slate-700 hover:text-blue-600 px-3 py-2 transition-colors">Marketplace</Link>
               <CartButton count={totalItems} onToggle={toggleCart} />
             </div>
           </div>
@@ -74,7 +74,7 @@ function NavSearch() {
 
     useEffect(() => {
         if (searchQuery.length < 2) {
-            if (suggestions.length > 0) { setSuggestions([]); }
+            setSuggestions([]);
             return;
         }
         const timer = setTimeout(() => {
@@ -195,7 +195,7 @@ function MobileMenu({ onClose }: { onClose: () => void }) {
                     <Link key={item.label} href={item.href} onClick={onClose} className="flex items-center gap-3 px-3 py-3 rounded-lg hover:bg-slate-50 text-sm font-semibold text-slate-800"><span>{item.icon}</span>{item.label}</Link>
                 ))}
                 <div className="border-t border-slate-100 mt-2 pt-2">
-                    <Link href="/search" onClick={onClose} className="flex items-center gap-3 px-3 py-3 rounded-lg hover:bg-slate-50 text-sm font-semibold text-slate-800"><Search className="h-4 w-4" /> All Cards</Link>
+                    <Link href="/search" onClick={onClose} className="flex items-center gap-3 px-3 py-3 rounded-lg hover:bg-slate-50 text-sm font-semibold text-slate-800"><Search className="h-4 w-4" /> Marketplace</Link>
                 </div>
             </div>
         </div>

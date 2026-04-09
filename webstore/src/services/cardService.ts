@@ -1,19 +1,43 @@
 import { ICard, IFilterState } from '@/types/models';
 import { mockCards } from '@/services/mockData';
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_SERVERSIDE_API_URL || 'http://localhost:3000/api';
+// Point to the business logic layer (Serverside API)
+// In development, assume serverside is on 3001, fallback to 3000 (local proxy)
+const API_BASE_URL = process.env.NEXT_PUBLIC_SERVERSIDE_API_URL || 'http://localhost:3001/api';
+
+/**
+ * Maps the raw database/API Card structure to the ICard interface used in the UI.
+ */
+function mapApiCardToICard(apiCard: any): ICard {
+  const attributes = apiCard.attributes || {};
+  return {
+    id: apiCard.id,
+    name: apiCard.name,
+    set: attributes.set || 'Unknown Set',
+    number: attributes.number || 'N/A',
+    rarity: apiCard.rarity || 'Common',
+    imageUrl: apiCard.image_url || '/placeholder-card.png',
+    marketPrice: attributes.marketPrice || 0,
+    lowPrice: attributes.lowPrice || 0,
+    buylistPrice: attributes.buylistPrice || 0,
+    game: apiCard.games?.name || 'Unknown Game',
+    gameId: apiCard.game_id,
+    isDirectEligible: attributes.isDirectEligible || false,
+    listedCount: attributes.listedCount || 0,
+    volatility: attributes.volatility || 0,
+  };
+}
 
 export const cardService = {
   async getCards(): Promise<ICard[]> {
     try {
-        // Request a high limit to ensure dashboard stats are accurate for the full catalog
-        const response = await fetch(`${API_BASE_URL}/cards/search?limit=1000`);
-        if (!response.ok) {
+        const response = await fetch(`${API_BASE_URL}/cards/search?limit=1000`).catch(() => null);
+        if (!response || !response.ok) {
             return mockCards;
         }
         const data = await response.json();
-        // Extract the cards array from the paginated response
-        return Array.isArray(data) ? data : data.cards || mockCards;
+        const cards = Array.isArray(data) ? data : data.cards || [];
+        return cards.map(mapApiCardToICard);
     } catch {
         return mockCards;
     }
@@ -21,11 +45,28 @@ export const cardService = {
 
   async getCardById(id: string): Promise<ICard | null> {
     try {
-        const response = await fetch(`${API_BASE_URL}/cards/${id}`);
-        if (!response.ok) {
+        // Concurrently fetch card details and market stats
+        const [cardRes, statsRes] = await Promise.all([
+            fetch(`${API_BASE_URL}/cards/${id}`).catch(() => null),
+            fetch(`${API_BASE_URL}/market/stats/${id}`).catch(() => null)
+        ]);
+
+        if (!cardRes || !cardRes.ok) {
             return mockCards.find(c => c.id === id) || null;
         }
-        return response.json();
+
+        const cardData = await cardRes.json();
+        const mappedCard = mapApiCardToICard(cardData);
+
+        // Merge market stats if available
+        if (statsRes && statsRes.ok) {
+            const statsData = await statsRes.json();
+            mappedCard.marketPrice = statsData.market_price || mappedCard.marketPrice;
+            mappedCard.lowPrice = statsData.low_price || mappedCard.lowPrice;
+            mappedCard.listedCount = statsData.total_listings || mappedCard.listedCount;
+        }
+
+        return mappedCard;
     } catch {
         return mockCards.find(c => c.id === id) || null;
     }
@@ -41,21 +82,21 @@ export const cardService = {
           page: page.toString(),
           limit: limit.toString(),
           ...(filters.searchQuery && { q: filters.searchQuery }),
-          ...(filters.game && { game: filters.game.join(',') }),
-          ...(filters.rarity && { rarity: filters.rarity.join(',') }),
+          ...(filters.game && filters.game.length > 0 && { game: filters.game.join(',') }),
+          ...(filters.rarity && filters.rarity.length > 0 && { rarity: filters.rarity.join(',') }),
           ...(filters.sortBy && { sort: filters.sortBy }),
         });
 
-        const response = await fetch(`${API_BASE_URL}/cards/search?${queryParams}`);
-        if (!response.ok) {
-            throw new Error();
+        const response = await fetch(`${API_BASE_URL}/cards/search?${queryParams}`).catch(() => null);
+        if (!response || !response.ok) {
+            return getMockPaginatedCards(page, limit, filters);
         }
         
         const data = await response.json();
         return {
-          cards: data.cards,
-          total: data.total,
-          hasMore: data.hasMore
+          cards: (data.cards || []).map(mapApiCardToICard),
+          total: data.total || 0,
+          hasMore: data.hasMore || false
         };
     } catch {
         return getMockPaginatedCards(page, limit, filters);

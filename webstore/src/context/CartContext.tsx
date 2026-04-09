@@ -22,23 +22,28 @@ interface ICartContext {
 
 const CartContext = createContext<ICartContext | undefined>(undefined);
 
+export function calculateTotals(items: ICartItem[]) {
+  const totalItems = items.reduce((sum, item) => sum + item.quantity, 0);
+  const totalPrice = items.reduce((sum, item) => sum + ((item.marketPrice || 0) * item.quantity), 0);
+  return { totalItems, totalPrice };
+}
+
 function useCartStore() {
   const [items, setItems] = useState<ICartItem[]>([]);
   const [isInitialized, setIsInitialized] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
 
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('cart');
-      if (saved) {
-        try {
-          setItems(JSON.parse(saved));
-        } catch (e) {
-          console.error('Failed to parse cart', e);
-        }
+    const saved = localStorage.getItem('cart');
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        setItems(parsed);
+      } catch (e) {
+        console.error('Failed to parse cart', e);
       }
-      setIsInitialized(true);
     }
+    setIsInitialized(true);
   }, []);
 
   useEffect(() => {
@@ -76,8 +81,7 @@ function useCartStore() {
   const clearCart = () => setItems([]);
   const toggleCart = () => setIsOpen((prev) => !prev);
 
-  const totalItems = items.reduce((sum, item) => sum + item.quantity, 0);
-  const totalPrice = items.reduce((sum, item) => sum + ((item.marketPrice || 0) * item.quantity), 0);
+  const { totalItems, totalPrice } = calculateTotals(items);
 
   return { items, addItem, removeItem, updateQuantity, clearCart, isOpen, setIsOpen, toggleCart, totalItems, totalPrice };
 }

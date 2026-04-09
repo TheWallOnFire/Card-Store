@@ -6,6 +6,7 @@ import { FileUp, AlertCircle, Sparkles, Loader2 } from 'lucide-react';
 import { toast, Toaster } from 'sonner';
 import { bulkImportAction, IBulkImportResult } from '@/app/actions/bulk-import';
 import { ImportTerminal, ImportStats, ImportPreview } from './BulkImportComponents';
+import { parseBulkLines } from '@/lib/parsers';
 
 const mockCardsDb: ICard[] = [
   { id: '001', gameId: 'ygo', game: 'Yu-Gi-Oh!', name: 'Blue-Eyes White Dragon', set: '', number: '', rarity: '', imageUrl: '', marketPrice: 0, lowPrice: 0, buylistPrice: 0, isDirectEligible: false },
@@ -31,8 +32,31 @@ export default function BulkImportPage() {
   }, [state]);
 
   const handleParse = (text: string) => {
-    const items = parseRawInput(text, mockCardsDb);
-    setParsedItems(items);
+    const { items, errors } = parseBulkLines(text);
+    
+    // Map the global parser items to the local IParsedDeckItem structure
+    const enrichedItems: IParsedDeckItem[] = items.map(item => {
+      const found = mockCardsDb.find(c => c.gameId === item.gameId && c.id === item.cardId);
+      return {
+        gameId: item.gameId,
+        cardId: item.cardId,
+        count: item.count,
+        status: found ? 'valid' : 'invalid',
+        cardName: found?.name
+      };
+    });
+
+    // Handle lines that failed the initial regex/basic check
+    // We can't perfectly map them back to gameId/cardId if they are malformed,
+    // so we just add them as placeholders to show the error counts.
+    const errorPlaceholders: IParsedDeckItem[] = errors.map(() => ({
+      gameId: '',
+      cardId: '',
+      count: 0,
+      status: 'invalid'
+    }));
+
+    setParsedItems([...enrichedItems, ...errorPlaceholders]);
   };
 
   const stats = useMemo(() => ({
@@ -67,24 +91,7 @@ export default function BulkImportPage() {
   );
 }
 
-function parseRawInput(text: string, db: ICard[]): IParsedDeckItem[] {
-  const lines = text.split('\n').filter(l => l.trim());
-  return lines.map(line => {
-    const parts = line.trim().split('_');
-    if (parts.length < 3) {
-      return { gameId: '', cardId: '', count: 0, status: 'invalid' };
-    }
-    const [gameId, cardId, countStr] = parts;
-    const found = db.find(c => c.gameId === gameId && c.id === cardId);
-    return { 
-      gameId, 
-      cardId, 
-      count: parseInt(countStr, 10) || 0, 
-      status: found ? 'valid' : 'invalid', 
-      cardName: found?.name 
-    };
-  });
-}
+// Removed local parseRawInput in favor of @/lib/parsers
 
 function Header() {
   return (

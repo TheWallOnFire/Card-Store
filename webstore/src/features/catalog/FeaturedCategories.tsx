@@ -17,7 +17,7 @@ const categories = [
   {
     title: "Yu-Gi-Oh!",
     span: "col-span-1 md:col-span-1 row-span-1",
-    img: "https://images.unsplash.com/photo-1598284560416-bc1ddcb00508?q=80&w=1000&auto=format&fit=crop",
+    img: "https://images.unsplash.com/photo-1621252179027-94459d278660?q=80&w=1000&auto=format&fit=crop",
     color: "from-purple-900/80"
   },
   {

@@ -1,4 +1,6 @@
-import React from 'react';
+'use client';
+
+import React, { useState, useEffect } from 'react';
 import Image from 'next/image';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
@@ -35,6 +37,7 @@ const SIZE_CLASSES: Record<CardImageSize, string> = {
 };
 
 const BLUR_DATA_URL = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mN8/+F9PQAI8AKpTiaXggAAAABJRU5ErkJggg==';
+const FALLBACK_IMG = 'https://images.unsplash.com/photo-1614728416049-34baeba242f3?auto=format&fit=crop&q=80&w=800';
 
 export function CardImage({
   cardId,
@@ -47,6 +50,11 @@ export function CardImage({
   priority = false,
 }: ICardImageProps) {
   const { resolvedSrc, resolvedAlt } = resolveImageData(cardId, src, alt);
+  const [imgSrc, setImgSrc] = useState(resolvedSrc);
+
+  useEffect(() => {
+    setImgSrc(resolvedSrc);
+  }, [resolvedSrc]);
 
   return (
     <div
@@ -59,7 +67,7 @@ export function CardImage({
       )}
     >
       <Image
-        src={resolvedSrc}
+        src={imgSrc}
         alt={resolvedAlt}
         fill
         sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
@@ -67,6 +75,11 @@ export function CardImage({
         placeholder="blur"
         blurDataURL={BLUR_DATA_URL}
         className={cn("object-contain transition-opacity duration-500", imgClassName)}
+        onError={() => {
+          if (imgSrc !== FALLBACK_IMG) {
+            setImgSrc(FALLBACK_IMG);
+          }
+        }}
       />
     </div>
   );

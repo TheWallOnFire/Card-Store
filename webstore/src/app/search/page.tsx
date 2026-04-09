@@ -11,12 +11,9 @@ import { IFilterState, ICard } from '@/types/models';
 import { useIntersectionObserver } from '@/hooks/useIntersectionObserver';
 import { Loader2, FilterX } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
-import { SearchHeader, SearchControls } from './SearchComponents';
+import { SearchHeader, SearchControls, ActiveFilters } from './SearchComponents';
 
-const DEFAULT_FILTERS: IFilterState = {
-  searchQuery: '', rarity: [], sets: [], cardType: [], game: [], colors: [],
-  priceRange: [0, 5000], sortBy: 'price_asc', isDirectOnly: false,
-};
+import { deriveFilters, serializeFilters } from '@/lib/filters';
 
 const ITEMS_PER_PAGE = 20;
 
@@ -25,11 +22,29 @@ function SearchPageContent() {
   const router = useRouter();
   const pathname = usePathname();
   
-  const filters = useMemo(() => deriveFilters(searchParams), [searchParams]);
+  const filters = useMemo(() => deriveFilters(new URLSearchParams(searchParams.toString())), [searchParams]);
 
   const updateFilters = (newFilters: IFilterState) => {
     const params = serializeFilters(newFilters);
-    router.push(`${pathname}?${params.toString()}`);
+    router.push(`${pathname}?${params.toString()}`, { scroll: false });
+  };
+
+  const resetFilters = () => {
+    router.push(pathname, { scroll: false });
+  };
+
+  const removeFilter = (key: keyof IFilterState, value: string | boolean | number[]) => {
+      const newFilters = { ...filters };
+      const currentVal = newFilters[key];
+      
+      if (Array.isArray(currentVal)) {
+          (newFilters[key] as string[]) = (currentVal as string[]).filter(v => v !== value);
+      } else if (typeof currentVal === 'boolean') {
+          (newFilters[key] as boolean) = false;
+      } else if (key === 'searchQuery') {
+          newFilters.searchQuery = '';
+      }
+      updateFilters(newFilters);
   };
 
   const query: UseInfiniteQueryResult<InfiniteData<{ cards: ICard[], total: number, hasMore: boolean }>> = useInfiniteQuery({
@@ -49,58 +64,22 @@ function SearchPageContent() {
     <div className="min-h-screen bg-slate-50">
       <SearchHeader searchQuery={filters.searchQuery} totalResults={query.data?.pages[0]?.total || 0} isLoading={query.isLoading} />
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
-        <div className="flex gap-12">
+        <div className="flex flex-col lg:flex-row gap-12">
           <aside className="hidden lg:block w-72 shrink-0 sticky top-28 self-start">
             <div className="bg-white rounded-3xl border border-slate-200 p-8 shadow-sm">
-                <FilterSidebar filters={filters} onFilterChange={updateFilters} />
+                <FilterSidebar filters={filters} onFilterChange={updateFilters} onClear={resetFilters} />
             </div>
           </aside>
           <SearchContent 
             filters={filters} 
             updateFilters={updateFilters} 
+            onRemoveFilter={removeFilter}
             query={query} 
           />
         </div>
       </div>
     </div>
   );
-}
-
-function deriveFilters(searchParams: URLSearchParams): IFilterState {
-  const game = searchParams.get('game')?.split(',').filter(Boolean) || [];
-  const rarity = searchParams.get('rarity')?.split(',').filter(Boolean) || [];
-  const q = searchParams.get('q') || '';
-  const sort = searchParams.get('sort') || 'price_asc';
-  const type = searchParams.get('type')?.split(',').filter(Boolean) || [];
-
-  return {
-    ...DEFAULT_FILTERS,
-    game: game.map(g => g.charAt(0).toUpperCase() + g.slice(1).toLowerCase()),
-    rarity,
-    searchQuery: q,
-    sortBy: sort,
-    cardType: type
-  };
-}
-
-function serializeFilters(filters: IFilterState): URLSearchParams {
-  const params = new URLSearchParams();
-  if (filters.searchQuery) {
-    params.set('q', filters.searchQuery);
-  }
-  if (filters.game.length) {
-    params.set('game', filters.game.join(',').toLowerCase());
-  }
-  if (filters.rarity.length) {
-    params.set('rarity', filters.rarity.join(','));
-  }
-  if (filters.sortBy !== 'price_asc') {
-    params.set('sort', filters.sortBy);
-  }
-  if (filters.cardType.length) {
-    params.set('type', filters.cardType.join(','));
-  }
-  return params;
 }
 
 export default function SearchPage() {
@@ -115,9 +94,10 @@ export default function SearchPage() {
   );
 }
 
-function SearchContent({ filters, updateFilters, query }: { 
+function SearchContent({ filters, updateFilters, onRemoveFilter, query }: { 
     filters: IFilterState, 
     updateFilters: (f: IFilterState) => void, 
+    onRemoveFilter: (key: keyof IFilterState, value: string | boolean | number[]) => void,
     query: UseInfiniteQueryResult<InfiniteData<{ cards: ICard[], total: number, hasMore: boolean }>>
 }) {
     const allCards = useMemo(() => query.data?.pages.flatMap((page) => page.cards) || [], [query.data]);
@@ -138,6 +118,9 @@ function SearchContent({ filters, updateFilters, query }: {
                 sortBy={filters.sortBy || 'price_asc'}
                 onSortChange={(val) => updateFilters({ ...filters, sortBy: val })}
             />
+            
+            <ActiveFilters filters={filters} onRemove={onRemoveFilter} />
+
             <CardGrid cards={allCards} isLoading={query.isLoading} CardComponent={ProductCard} emptyMessage="No matches found." />
             <div ref={targetRef} className="py-16 flex flex-col items-center gap-4">
                 {query.isFetchingNextPage ? (

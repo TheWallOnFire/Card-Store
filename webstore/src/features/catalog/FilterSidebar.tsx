@@ -10,17 +10,26 @@ import { IFilterState } from '@/types/models';
 interface IFilterSidebarProps {
   filters: IFilterState;
   onFilterChange: (filters: IFilterState) => void;
+  onClear?: () => void;
 }
 
 const GAME_OPTIONS = ['Pokémon', 'Magic: The Gathering', 'Yu-Gi-Oh!', 'One Piece', 'Disney Lorcana', 'Flesh and Blood'];
 const RARITY_OPTIONS = ['Common', 'Uncommon', 'Rare', 'Rare Holo', 'Ultra Rare', 'Secret Rare'];
 
-export function FilterSidebar({ filters, onFilterChange }: IFilterSidebarProps) {
+export function FilterSidebar({ filters, onFilterChange, onClear }: IFilterSidebarProps) {
   const activeCount = calculateActiveFilters(filters);
+
+  const handleClear = () => {
+    if (onClear) {
+      onClear();
+    } else {
+      clearFilters(filters, onFilterChange);
+    }
+  };
 
   return (
     <aside className="w-full bg-white rounded-xl border border-slate-200 p-5 shadow-sm">
-      <SidebarHeader activeCount={activeCount} onClear={() => clearFilters(filters, onFilterChange)} />
+      <SidebarHeader activeCount={activeCount} onClear={handleClear} />
       <DirectToggle isDirect={filters.isDirectOnly} onChange={(v) => onFilterChange({ ...filters, isDirectOnly: v })} />
       
       <div className="space-y-4">
@@ -48,13 +57,29 @@ function clearFilters(f: IFilterState, onChange: (f: IFilterState) => void) {
 
 function SidebarHeader({ activeCount, onClear }: { activeCount: number, onClear: () => void }) {
     return (
-        <div className="flex items-center justify-between mb-6">
-            <div className="flex items-center gap-2">
-                <SlidersHorizontal className="h-4 w-4 text-blue-600" />
-                <h2 className="text-sm font-black uppercase tracking-widest text-slate-900">Refine</h2>
-                {activeCount > 0 && <span className="h-5 w-5 text-[10px] font-bold bg-blue-600 text-white rounded-full flex items-center justify-center">{activeCount}</span>}
+        <div className="flex items-center justify-between mb-8 pb-4 border-b border-slate-100">
+            <div className="flex items-center gap-2.5">
+                <div className="p-2 bg-blue-50 rounded-lg">
+                    <SlidersHorizontal className="h-4 w-4 text-blue-600" />
+                </div>
+                <div>
+                    <h2 className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 leading-none mb-1">Index Filter</h2>
+                    <h3 className="text-sm font-black uppercase tracking-tight text-slate-900">Refine Results</h3>
+                </div>
+                {activeCount > 0 && (
+                    <span className="h-5 w-5 text-[9px] font-black bg-blue-600 text-white rounded-md flex items-center justify-center animate-in zoom-in-50 duration-300">
+                        {activeCount}
+                    </span>
+                )}
             </div>
-            {activeCount > 0 && <button onClick={onClear} className="text-[10px] font-black text-red-500 uppercase tracking-widest">Clear</button>}
+            {activeCount > 0 && (
+                <button 
+                    onClick={onClear} 
+                    className="text-[9px] font-black text-rose-500 uppercase tracking-widest hover:text-rose-600 transition-colors bg-rose-50 px-2 py-1 rounded"
+                >
+                    Clear All
+                </button>
+            )}
         </div>
     );
 }

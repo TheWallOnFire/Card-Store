@@ -19,6 +19,7 @@ export function AddToCartButton({ card }: { card: ICard }) {
   );
 
   const handleAdd = () => {
+    console.log('[AddToCartButton] Initiating add for card:', card.id);
     startTransition(async () => {
         setOptimisticAdded(true);
         // Simulate a small delay for server sync

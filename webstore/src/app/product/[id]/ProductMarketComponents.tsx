@@ -53,12 +53,10 @@ export function MarketAnalyticsSection({ cardId, initialPrice }: IMarketAnalytic
       <PriceHistoryChart data={chartData} />
       <div className="grid grid-cols-2 gap-3">
         <div className="bg-white p-3 rounded-2xl border border-slate-100">
-            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Low (24h)</p>
-            <p className="text-sm font-black text-slate-900">${data.low_price.toFixed(2)}</p>
+            <p className="text-sm font-black text-slate-900">${data?.low_price?.toFixed(2) || '0.00'}</p>
         </div>
         <div className="bg-white p-3 rounded-2xl border border-slate-100">
-            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Volume</p>
-            <p className="text-sm font-black text-slate-900">{data.total_listings} List.</p>
+            <p className="text-sm font-black text-slate-900">{data?.total_listings || 0} List.</p>
         </div>
       </div>
     </div>
