@@ -1,0 +1,90 @@
+name: Comprehensive TCG Marketplace Tests
+
+on:
+  pull_request:
+    branches: [ main, develop ]
+  push:
+    branches: [ main, develop ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    
+    services:
+      # Mock Supabase / Database-linked services can be added here if using local CLI
+      # supabase:
+      #   image: supabase/postgres:15.1.0.117
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: webstore/package-lock.json
+
+      - name: Install Webstore Dependencies
+        run: |
+          cd webstore
+          npm ci
+
+      - name: Linting
+        run: |
+          cd webstore
+          npm run lint
+
+      - name: Install Serverside Dependencies
+        run: |
+          cd serverside
+          npm ci
+
+      - name: Type Checking
+        run: |
+          cd webstore
+          npx tsc --noEmit
+
+      - name: Unit Tests (Vitest - Frontend)
+        run: |
+          cd webstore
+          npm run test -- --run
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+
+      - name: Unit Tests (Vitest - Backend)
+        run: |
+          cd serverside
+          npm run test -- --run
+
+      - name: Install Playwright Browsers
+        run: |
+          cd webstore
+          npx playwright install --with-deps
+
+      - name: E2E Tests (Playwright)
+        run: |
+          cd webstore
+          npx playwright test
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+
+      - name: Lighthouse CI
+        run: |
+          npm install -g @lhci/cli@0.13.x
+          lhci autorun
+        continue-on-error: true
+        env:
+          LHCI_GITHUB_APP_TOKEN: ${{ secrets.LHCI_GITHUB_APP_TOKEN }}
+
+      - name: Upload Test Results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: |
+            webstore/playwright-report/
+            webstore/test-results/
